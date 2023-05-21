@@ -43,6 +43,27 @@ def showMainMenu():
     print("추천메뉴: 1.버거, 2.해피스낵, 3.사이드, 4.커피, 5.디저트, 6.음료, 7.해피밀이 있습니다.")
     meal = int(input("위 번호 중 하나를 입력하세요 : "))
     return meal
+def burgerSelect(burgerList):
+    tempDict ={}
+    print(f"버거를 선택하셨군요 메뉴 보여드릴게요.")
+    for i in range(len(burgerList.keys())):
+        print(f"({i+1}) {list(burgerList.keys())[i]}:{list(burgerList.values())[i]}")
+    addBurger = int(input("선택할 버거 입력 : "))
+    tempSummation = list(burgerList.values())[addBurger-1]
+    print("단품버거 재료추가/변경란 입니다.")
+    print("버거에 ①양상추 추가는 무료, 버거에 ②치즈추가는 1장당 500원 추가, ③양파 1번당 500원이 추가됩니다.")
+    print("①양상추추가, ②치즈추가, ③양파추가 (모든재료 중복추가가능)")
+    addCabbage = int(input("양상추는 몇번이나 추가할까요?: "))
+    addCheese = int(input("치즈는 몇번이나 추가할까요?: "))
+    addOnion = int(input("양파는 몇번이나 추가할까요?: "))
+    print(f"양상추 {addCabbage}번, 치즈 {addCheese}장, 양파{addOnion}번, 재료추가 가격은 +{(addOnion + addCheese) * 500}원 입니다.")
+    #tempSummation += (addCheese + addOnion) * 500
+    #print(f"총 가격은 {tempSummation}원 입니다.")
+    tempDict[list(burgerList.keys())[addBurger-1]] = list(burgerList.values())[addBurger-1]
+    tempDict['양상추']=addCabbage
+    tempDict['치즈']=addCheese*500
+    tempDict['양파']=addOnion*500
+    return tempDict
 def universialSelect(dict,dictIndex):
     itemDict = {}
     resultDict = {}
@@ -62,7 +83,6 @@ def universialSelect(dict,dictIndex):
     itemDict[itemDictKey]=itemDictValue
     resultDict[resultDictKey]=itemDict
     return resultDict
-
 def calcSummation(orderData):
     summation = 0
     for category, items in orderData.items():
@@ -70,40 +90,29 @@ def calcSummation(orderData):
             summation += price
     return summation
 
-def burgerSelect(burgerList):
-    print(f"버거를 선택하셨군요 메뉴 보여드릴게요.")
-    for i in range(len(burgerList.keys())):
-        print(f"({i+1}) {list(burgerList.keys())[i]}:{list(burgerList.values())[i]}")
-    addBurger = int(input("선택할 버거 입력 : "))
-    tempSummation = list(burgerList.values())[addBurger-1]
-    print("단품버거 재료추가/변경란 입니다.")
-    print("버거에 ①양상추 추가는 무료, 버거에 ②치즈추가는 1장당 500원 추가, ③양파 1번당 500원이 추가됩니다.")
-    print("①양상추추가, ②치즈추가, ③양파추가 (모든재료 중복추가가능)")
-    addCabbage = int(input("양상추는 몇번이나 추가할까요?: "))
-    addCheese = int(input("치즈는 몇번이나 추가할까요?: "))
-    addOnion = int(input("양파는 몇번이나 추가할까요?: "))
-    print(f"양상추 {addCabbage}번, 치즈 {addCheese}장, 양파{addOnion}번, 재료추가 가격은 +{(addOnion + addCheese) * 500}원 입니다.")
-    tempSummation += (addCheese + addOnion) * 500
-    print(f"총 가격은 {tempSummation}원 입니다.")
-    return tempSummation
-
 #프로그램 시작
 print("#################################################")
 print("")
 print("맥도날드 키오스크 프로그램 v1.0")
 print("")
 print("#################################################")
-eatSelect = int(input("포장=> 1 입력, 매장=> 2 입력, 종료=> 0 입력 : "))
-if eatSelect ==1:
-    meal = showMainMenu()
-    while True:
+
+while True:
+    eatSelect = int(input("포장=> 1 입력, 매장=> 2 입력, 종료=> 0 입력 : "))
+    #멈춤
+    if eatSelect == 0:
+        break
+    #포장
+    elif eatSelect == 1:
+        meal = showMainMenu()
         #버거
         if meal == 1:
-            burgerSelect(menuData['burger'])
-        eatSelect = int(input("==>다른 메뉴가 있으면 선택 해 주세요 포장=>1입력, 매장=>2입력, 종료=>0 : "))
-        if eatSelect == 0:
-            break
-        #버거가 아닌경우
+            if orderData['burger'] not in orderData:
+                orderData['burger'] = burgerSelect(menuData['burger'])
+            else:
+                orderData['burger'].update(burgerSelect(menuData['burger']))
+            eatSelect = int(input("==>다른 메뉴가 있으면 선택 해 주세요 포장=>1입력, 매장=>2입력, 종료=>0 : "))
+        #버거아닌경우
         else:
             chosenMenu = universialSelect(menuData, meal - 1)
             if list(chosenMenu.keys())[0] not in orderData:
@@ -111,8 +120,8 @@ if eatSelect ==1:
             else:
                 orderData[list(chosenMenu.keys())[0]].update(list(chosenMenu.values())[0])
             eatSelect = int(input("==>다른 메뉴가 있으면 선택 해 주세요 포장=>1입력, 매장=>2입력, 종료=>0 : "))
-            if eatSelect == 0:
-                break
-    print(f"장바구니의 총 합계는 {calcSummation(orderData)}원 입니다.")
-else:
-    pass
+    #매장(총가격의 1.5배)
+    elif eatSelect ==2:
+        pass
+    else:
+        pass
