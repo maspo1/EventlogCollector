@@ -3,6 +3,7 @@ menuData ={}
 summation = 0
 orderData ={}
 
+
 burger = {"빅맥":4600, "맥스파이시상하이치킨버거":4600, "트리플리치포테이토머쉬룸버거":6900, "트리플리치포테이토버거":6500,
           "트리플치즈버거":5600, "1955버거":5700, "더블팔레오피쉬버거":5000, "팔레오피쉬버거":5000}
 happy_snack = {"츄러스":1500, "카페라떼":2200, "자두칠러":2000, "케이준비프스낵랩":1500, "불고기버거":1900,
@@ -36,6 +37,7 @@ menuData['set_side']=set_side
 menuData['set_drink']=set_drink
 menuData['mcmorning']=mcmorning
 menuData['mcmorning_combo']=mcmorning_combo
+
 
 #함수선언
 def showMainMenu():
@@ -89,6 +91,7 @@ def calcSummation(orderData):
         for item, price in items.items():
             summation += price
     return summation
+
 
 #프로그램 시작
 print("#################################################")
