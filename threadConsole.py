@@ -9,7 +9,7 @@ import scipy.stats as stats
 
 uic.loadType[0]
 
- num_threads = 4
+num_threads = 4
 np.random.seed(0)
 n = 10
 num_tags = 100000

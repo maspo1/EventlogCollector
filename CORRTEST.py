@@ -58,7 +58,7 @@ for i in range(len(tags)):
             overCorrelation.append([tag1,tag2])
             print(f"평균 상관계수: {correlation:.6f} (Tag{tag1} <-> Tag{tag2})")
 
-print(overCorrelation)
+print(overCorrelation,"오버")
 
 
 def columnCorrelation(dataDict, overCorrelation):
@@ -74,7 +74,10 @@ def columnCorrelation(dataDict, overCorrelation):
             col2 = df2.columns[idx]
             correlation = df1[col1].corr(df2[col2])  # 같은 인덱스의 열 간 상관계수 계산
             print(f"상관계수: {tag1} <{col1}일> <==> {tag2} <{col2}일> {correlation:.6f}")
-            dataDict[f"{tag1}<->{tag2}"].append([col1, correlation])
+            try:
+                dataDict[f"{tag1}<->{tag2}"].append([col1, correlation])
+            except KeyError as e:
+                dataDict[f"{tag1}<->{tag2}"] = [col1, correlation]
     return dataDict
 #열별 상관계수
 def columnCorrelation2():
@@ -144,5 +147,6 @@ def plot_scatter(data, overCorrelation):
 
 #------------------------실행>>
 data = columnCorrelation(dataDict, overCorrelation)
+for i in range(len(data.keys())):
+    print(data.values())
 #plot_scatter(data,overCorrelation)
-print(data)
