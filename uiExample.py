@@ -3,7 +3,7 @@ import sys, os
 import pandas as pd
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QVBoxLayout, QWidget, QMenuBar, QHBoxLayout
-from PyQt5.QtCore import QThread, pyqtSignal, QObject
+from PyQt5.QtCore import QThread, pyqtSignal, QObject, QTimer
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,14 +17,12 @@ import seaborn as sns
 from scipy import stats  # Import scipy's stats module
 import time
 import random
-
-class Worker(QThread):
-    update_signal = pyqtSignal(str)
-    def __init__(self, ax):
+class GenerateData(QThread):
+    signal_Log = pyqtSignal(str)
+    signal_Data = pyqtSignal(dict)
+    def __init__(self):
         super().__init__()
-        self.ax = ax
     def run(self):
-        # 원본 산점도와 회귀모델 표시
         # # 실제 회귀직선의 계수와 절편
         true_slope = 10
         true_intercept = 0.115
@@ -47,11 +45,13 @@ class Worker(QThread):
         model = Sequential()
         model.add(Dense(1, input_dim=1))
         model.compile(loss='mean_squared_error', optimizer='Adam')
+
         # 모델 학습
-        for epoch in range(1000):
-            loss = model.train_on_batch(x, y)
-            update_text = f"Epoch {epoch + 1}: Loss = {loss:.4f}\n"
-            self.update_signal.emit(update_text)  # 시그널 발생
+        for epoch in range(1500):
+            history = model.fit(x, y, batch_size=32, verbose=0)
+            loss = history.history['loss'][0]  # Get loss from the history
+            update_text = f"Epoch(학습량) {epoch + 1}: Loss(손실함수) = {loss:.4f}"
+            self.signal_Log.emit(update_text)
             time.sleep(0.1)
 
         # # 잔차 분석 및 표시
@@ -60,21 +60,75 @@ class Worker(QThread):
 
         # Z-Score 계산
         z_scores = (residuals - np.mean(residuals)) / np.std(residuals)
+        data = {
+            'x':x,
+            'y':y,
+            'x_test':x_test,
+            'y_test':y_test,
+            'x_train':x_train,
+            'y_train':y_train,
+            'y_pred':y_pred,
+            'residuals':residuals,
+            'z_scores':z_scores,
+            'model':model
+        }
+        self.signal_Data.emit(data)
 
+
+class RealTimeUpdaterThread(QThread):
+    update_text = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        for i in range(10):
+            self.update_text.emit(f"Updating text {i}\n")
+            self.msleep(1000)
+class ScatterPlotWidget(FigureCanvas):
+    def __init__(self, parent=None):
+        self.fig, self.ax = plt.subplots(2,2,figsize=(15,10))
+        super().__init__(self.fig)
+        self.setParent(parent)
+        self.canvas = FigureCanvas(self.figure)
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+    def plot_data(self, dict):
+        # 실제 회귀직선의 계수와 절편
+        true_slope = 10
+        true_intercept = 0.115
+
+        df = pd.DataFrame({'x':dict['x'], 'y':dict['y']})
+
+        model = dict['model']
+        x = df['x']
+        y = df['y']
+        x_test = dict['x_test']
+        y_test = dict['y_test']
+        x_train = dict['x_train']
+        y_train = dict['y_train']
+        residuals = dict['residuals']
+        y_pred = dict['y_pred']
+
+        #정의
         axs1 = self.ax[0, 0]
-        axs1.clear()  # 이전 그래프를 지웁니다
         axs2 = self.ax[1, 0]
         axs3 = self.ax[0, 1]
         axs4 = self.ax[1, 1]
+
         # 1. 원본 산점도와 회귀모델 표시
-        axs1.scatter(x, y)
+        axs1.clear()
+        axs1.scatter(df['x'], df['y'])
+        axs1.set_xlabel('X')
+        axs1.set_ylabel('Y')
         axs1.plot(x_train, model.predict(x_train), color='red', label='Regression Line')
         axs1.set_title('Original Scatter Plot and Regression Line')
         axs1.legend()
+
         # 2. Z-Score표시
         sns.residplot(x=x_test, y=residuals, ax=axs2)
         axs2.set_title('Residuals Plot')
-
         r2 = r2_score(y_test, y_pred)
 
         # 유의미한 회귀 모델인 경우
@@ -119,86 +173,7 @@ class Worker(QThread):
 
         self.figure.tight_layout()
         self.canvas.draw()
-class GenerateData(QThread):
-    data_generated = pyqtSignal(str, pd.DataFrame)
-    def __init__(self):
-        super().__init__()
-    def run(self):
-        # # 실제 회귀직선의 계수와 절편
-        true_slope = 10
-        true_intercept = 0.115
-
-        # # 데이터 생성
-        np.random.seed(42)
-        x = np.random.uniform(58, 60, size=(24 * 31,))
-        y = true_slope * x + true_intercept + np.random.normal(0, 5, size=(24 * 31,))  # 오차 추가
-
-        # # 회귀 모델 학습
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-        #
-        # # 차원 수정
-        x_train = x_train.reshape(-1, 1)
-        x_test = x_test.reshape(-1, 1)
-
-        # model = Sequential()
-        # model.add(Dense(10, activation='relu', input_dim=1))  # 더 깊은 신경망 구조 적용
-        # model.compile(loss='mean_squared_error', optimizer=optimizer)
-        model = Sequential()
-        model.add(Dense(1, input_dim=1))
-        model.compile(loss='mean_squared_error', optimizer='Adam')
-        # 모델 학습
-        for epoch in range(1000):
-            loss = model.train_on_batch(x, y)
-            update_text = f"Epoch(학습량) {epoch + 1}: Loss(손실함수) = {loss:.4f}"
-            self.data_generated.emit(update_text, None)
-            time.sleep(0.1)
-
-        # # 잔차 분석 및 표시
-        y_pred = model.predict(x_test).flatten()
-        residuals = y_test - y_pred
-
-        # Z-Score 계산
-        z_scores = (residuals - np.mean(residuals)) / np.std(residuals)
-        df = pd.DataFrame(
-            {'x':x,
-            'y':y,
-            'x_test':x_test,
-            'y_test':y_test,
-            'x_train':x_train,
-            'y_train':y_train,
-            'y_pred':y_pred,
-            'residuals':residuals,
-            'z-scores':z_scores
-            }
-        )
-        self.data_generated.emit(None, df)
-class RealTimeUpdaterThread(QThread):
-    update_text = pyqtSignal(str)
-
-    def __init__(self):
-        super().__init__()
-
-    def run(self):
-        for i in range(10):
-            self.update_text.emit(f"Updating text {i}\n")
-            self.msleep(1000)
-class ScatterPlotWidget(FigureCanvas):
-    def __init__(self, parent=None):
-        self.fig, self.ax = plt.subplots(2,2,figsize=(15,10))
-        super().__init__(self.fig)
-        self.setParent(parent)
-        self.canvas = FigureCanvas(self.figure)
-        layout = QVBoxLayout()
-        layout.addWidget(self.canvas)
-        self.setLayout(layout)
-    def plot_data(self, x_data, y_data):
-        axs = self.ax
-        axs[0,0].clear()
-        axs[0,0].scatter(x_data, y_data)
-        axs[0,0].set_xlabel('X')
-        axs[0,0].set_ylabel('Y')
-        axs[0,0].set_title('Scatter Plot')
-        self.draw()
+        #self.draw()
 class AnalWindow(QWidget):
     update_signal = pyqtSignal(str)
     def __init__(self):
@@ -245,20 +220,24 @@ class uiExample(QMainWindow):
         # self.data_thread.data_generated.connect(self.update_text)
         # self.data_thread.start()
 
+    def start_Linear_Regression(self):
+        self.data_thread = GenerateData()
+        self.data_thread.signal_Log.connect(self.update_log)
+        self.data_thread.signal_Data.connect(self.open_anal_window)
+        self.data_thread.start()
+
+    def open_anal_window(self, df):
+        ### -->> 딕셔너리를 통째로 넘겨서 plot_data함수안에서 가공ㅎㅎㅎ
+        self.anal_window = AnalWindow()
+        self.anal_window.scatter_widget.plot_data(df)
+        self.anal_window.show()
+
+
     def open_second_window(self):
         self.second_window = SecondWindow()
         self.second_window.show()
-
-    def open_anal_window(self):
-        self.anal_window = AnalWindow()
-        self.anal_window.scatter_widget.plot_data(3,3)
-        self.anal_window.show()
-    def start_Linear_Regression(self):
-        self.data_thread = GenerateData()
-        self.data_thread.data_generated.connect(self.update_text)
-        r = self.data_thread
-    def update_text(self, message):
-        self.plainTextEdit_2.appendPlainText(message)
+    def update_log(self, log):
+        self.logPlainText.appendPlainText(log)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
