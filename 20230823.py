@@ -34,7 +34,7 @@ optimizer = Adam(lr=0.001)
 model = Sequential()
 model.add(Dense(1, input_dim=1))
 model.compile(loss='mean_squared_error', optimizer=optimizer)
-model.fit(x_train, y_train, epochs=8000, verbose=1, validation_data=(x_test, y_test))
+model.fit(x_train, y_train, epochs=300, verbose=1, validation_data=(x_test, y_test))
 
 # 원본 산점도와 회귀모델 표시
 axs[0, 0].scatter(x, y)

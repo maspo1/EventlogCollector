@@ -2,12 +2,10 @@ import sys
 import concurrent.futures
 import pandas as pd
 import numpy as np
+from PyQt5 import uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QVBoxLayout, QWidget
-from PyQt5.QtCore import pyqtSignal, QObject, uic
+from PyQt5.QtCore import pyqtSignal, QObject
 import scipy.stats as stats
-
-
-uic.loadType[0]
 
 num_threads = 4
 np.random.seed(0)

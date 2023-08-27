@@ -134,8 +134,6 @@ class MainWindow(QMainWindow):
         ax.get_figure().canvas.draw()  # Update the canvas
 
 
-
-
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
