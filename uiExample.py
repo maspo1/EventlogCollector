@@ -1,5 +1,4 @@
 import sys, os
-
 import pandas as pd
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPlainTextEdit, QVBoxLayout, QWidget, QMenuBar, QHBoxLayout
@@ -17,10 +16,12 @@ import seaborn as sns
 from scipy import stats  # Import scipy's stats module
 import time
 import random
+
 class GenerateData(QThread):
     signal_Log = pyqtSignal(str)
     signal_Data = pyqtSignal(dict)
-    def __init__(self):
+    def __init__(self, epoch):
+        self.epoch = epoch
         super().__init__()
     def run(self):
         # # 실제 회귀직선의 계수와 절편
@@ -47,7 +48,7 @@ class GenerateData(QThread):
         model.compile(loss='mean_squared_error', optimizer='Adam')
 
         # 모델 학습
-        for epoch in range(1500):
+        for epoch in range(self.epoch):
             history = model.fit(x, y, batch_size=32, verbose=0)
             loss = history.history['loss'][0]  # Get loss from the history
             update_text = f"Epoch(학습량) {epoch + 1}: Loss(손실함수) = {loss:.4f}"
@@ -87,10 +88,12 @@ class RealTimeUpdaterThread(QThread):
             self.msleep(1000)
 class ScatterPlotWidget(FigureCanvas):
     def __init__(self, parent=None):
-        self.fig, self.ax = plt.subplots(2,2,figsize=(15,10))
+        self.fig = Figure(figsize=(20, 20))
+        self.ax = self.fig.subplots(2, 2)
+        #self.fig, self.ax = plt.subplots(2,2,figsize=(15,10))
         super().__init__(self.fig)
         self.setParent(parent)
-        self.canvas = FigureCanvas(self.figure)
+        self.canvas = FigureCanvas(self.fig)
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
         self.setLayout(layout)
@@ -171,11 +174,10 @@ class ScatterPlotWidget(FigureCanvas):
         axs4.text(0, 0.15, f'MSE: {mse:.4f}', fontsize=8)
         axs4.text(0, 0.1, f'MAE: {mae:.4f}', fontsize=8)
 
-        self.figure.tight_layout()
-        self.canvas.draw()
+        #self.figure.tight_layout()
+        #self.canvas.draw()
         #self.draw()
 class AnalWindow(QWidget):
-    update_signal = pyqtSignal(str)
     def __init__(self):
         super().__init__()
         # UI 파일을 로드
@@ -221,13 +223,15 @@ class uiExample(QMainWindow):
         # self.data_thread.start()
 
     def start_Linear_Regression(self):
-        self.data_thread = GenerateData()
+        line_edit = self.findChild(QtWidgets.QLineEdit, "lineEdit")  # QLineEdit 객체 찾기
+        text = line_edit.text()
+        self.data_thread = GenerateData(int(text))
         self.data_thread.signal_Log.connect(self.update_log)
         self.data_thread.signal_Data.connect(self.open_anal_window)
         self.data_thread.start()
 
     def open_anal_window(self, df):
-        ### -->> 딕셔너리를 통째로 넘겨서 plot_data함수안에서 가공ㅎㅎㅎ
+        #딕셔너리를 통째로 넘겨서 Plot안에서 가공
         self.anal_window = AnalWindow()
         self.anal_window.scatter_widget.plot_data(df)
         self.anal_window.show()
