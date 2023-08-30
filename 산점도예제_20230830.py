@@ -50,7 +50,7 @@ confidence_interval = stderr * stats.t.ppf((1 + 0.95) / 2, len(y) - 1)
 
 # x2와 y2 데이터
 X2 = X  # x2는 x와 값이 완벽하게 같다고 가정
-y2 = pd.read_csv(f'./hourData/{tag2}_HAN.csv').iloc[:,1]
+y2 = pd.read_csv(f'./hourData/{tag2}_HAN_zzinppa.csv').iloc[:,1]
 
 X2 = np.array(X2)
 y2 = np.array(y2)
@@ -63,15 +63,30 @@ residuals2 = y2 - y_pred
 outliers = np.where(np.abs(residuals2) > threshold)[0]
 
 #잔차의 연속적인 증가구간 찾기
-increasing_count = 0
-SOME_THRESHOLD = 5
-for i in range(1, len(residuals2)):
-    if np.abs(residuals2[i]) > np.abs(residuals2[i-1]):
-        increasing_count += 1
-    else:
-        increasing_count = 0
-    if increasing_count >= SOME_THRESHOLD:  # SOME_THRESHOLD는 연속적인 증가를 얼마나 지속해야 하는지에 대한 임계값입니다.
-        print(f"Found increasing pattern at index {i} i는 i-24부터 아마 마지막인덱스 일겁니다..")
+# x와 y를 x에 따라 정렬
+sorted_pairs = sorted(zip(X2, y2))
+x_sorted, y_sorted = zip(*sorted_pairs)
+
+# 동일한 y값을 가진 연속적인 x 구간 찾기
+same_y_intervals = []
+start_x = x_sorted[0]
+current_y = y_sorted[0]
+
+for i in range(1, len(y_sorted)):
+    if y_sorted[i] != current_y:
+        if start_x != x_sorted[i-1]:
+            same_y_intervals.append((start_x, x_sorted[i-1], current_y))
+        start_x = x_sorted[i]
+        current_y = y_sorted[i]
+
+# 마지막 구간 체크
+if start_x != x_sorted[-1]:
+    same_y_intervals.append((start_x, x_sorted[-1], current_y))
+
+# 결과 출력
+print("Intervals where y-values are constant while x is increasing:")
+for interval in same_y_intervals:
+    print(f"From x = {interval[0]} to x = {interval[1]} (y = {interval[2]})")
 
 model.fit(X2, y2)
 
@@ -104,7 +119,17 @@ plt.annotate('95% Confidence Interval', xy=(x_position, y_position), xytext=(x_p
              arrowprops=dict(facecolor='black', arrowstyle='->'),
              fontsize=12)
 plt.title("Predict Data")
+
+# 그래프 그리기
+plt.scatter(x_sorted, y_sorted)
+plt.title('Scatter Plot with Constant y Intervals')
+
+# 동일한 y값을 가진 구간 표시
+for interval in same_y_intervals:
+    plt.hlines(interval[2], interval[0], interval[1], colors='r', linestyles='dashed')
 plt.legend()
+
+
 
 plt.tight_layout()
 plt.show()
