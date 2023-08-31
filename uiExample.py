@@ -17,11 +17,16 @@ from scipy import stats  # Import scipy's stats module
 import time
 import random
 
+# #정규화코드
+# from sklearn.preprocessing import MinMaxScaler
+# scaler = MinMaxScaler()
+# scaler.fit_transform()
+
 class GenerateData(QThread):
     signal_Log = pyqtSignal(str)
     signal_Data = pyqtSignal(dict)
     def __init__(self, epoch):
-        self.epoch = epoch
+        self.epoch = int(epoch)
         super().__init__()
     def run(self):
         # # 실제 회귀직선의 계수와 절편
@@ -74,8 +79,6 @@ class GenerateData(QThread):
             'model':model
         }
         self.signal_Data.emit(data)
-
-
 class RealTimeUpdaterThread(QThread):
     update_text = pyqtSignal(str)
 
@@ -186,13 +189,12 @@ class AnalWindow(QWidget):
         self.layout = QVBoxLayout(self)
         self.scatter_widget = ScatterPlotWidget()
         self.layout.addWidget(self.scatter_widget)
-class SecondWindow(QWidget):
+class tagWindow(QWidget):
     def __init__(self):
         super().__init__()
         # UI 파일을 로드
         uic.loadUi("tag.ui", self)  # UI 파일명을 실제 파일명으로 대체
 class uiExample(QMainWindow):
-    update_signal = pyqtSignal(str)  # 시그널 정의
     def __init__(self):
         super().__init__()
         uic.loadUi("main.ui", self)  # UI 파일명을 실제 파일명으로 대체
@@ -200,32 +202,21 @@ class uiExample(QMainWindow):
         tag_menu = self.menuBar().findChild(QtWidgets.QMenu, "menu")
         # 새로운 윈도우 열기 액션 추가
         open_action = QtWidgets.QAction("태그추출", self)
-        open_action.triggered.connect(self.open_second_window)
+        open_action.triggered.connect(self.open_tag_window)
         tag_menu.addAction(open_action)
 
         # 기존에 만들어진 메뉴 객체 가져오기
         anal_menu = self.menuBar().findChild(QtWidgets.QMenu, "menu_2")
+
         # 새로운 윈도우 열기 액션 추가
-        open_action = QtWidgets.QAction("회귀모델 딥러닝수행", self)
+        open_action = QtWidgets.QAction("회귀모델생성", self)
         open_action.triggered.connect(self.start_Linear_Regression)
         anal_menu.addAction(open_action)
-        # 새로운 윈도우 열기 액션 추가
-        open_action = QtWidgets.QAction("회귀분석", self)
-        open_action.triggered.connect(self.open_anal_window)
-        anal_menu.addAction(open_action)
-
-        # 연결
-        # self.text_thread = RealTimeUpdaterThread()
-        # self.text_thread.update_text.connect(self.update_text)
-        # self.text_thread.start()
-        # self.data_thread = GenerateData()
-        # self.data_thread.data_generated.connect(self.update_text)
-        # self.data_thread.start()
 
     def start_Linear_Regression(self):
         line_edit = self.findChild(QtWidgets.QLineEdit, "lineEdit")  # QLineEdit 객체 찾기
         text = line_edit.text()
-        self.data_thread = GenerateData(int(text))
+        self.data_thread = GenerateData(text)
         self.data_thread.signal_Log.connect(self.update_log)
         self.data_thread.signal_Data.connect(self.open_anal_window)
         self.data_thread.start()
@@ -235,11 +226,9 @@ class uiExample(QMainWindow):
         self.anal_window = AnalWindow()
         self.anal_window.scatter_widget.plot_data(df)
         self.anal_window.show()
-
-
-    def open_second_window(self):
-        self.second_window = SecondWindow()
-        self.second_window.show()
+    def open_tag_window(self):
+        self.tag_window = tagWindow()
+        self.tag_window.show()
     def update_log(self, log):
         self.logPlainText.appendPlainText(log)
 

@@ -5,6 +5,8 @@ from keras import Sequential
 from keras.layers import Dense
 from scipy import stats
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+
 EPOCH = 5000
 
 tag1 = 'DCD1AIG01ACTI01'
@@ -50,7 +52,7 @@ confidence_interval = stderr * stats.t.ppf((1 + 0.95) / 2, len(y) - 1)
 
 # x2와 y2 데이터
 X2 = X  # x2는 x와 값이 완벽하게 같다고 가정
-y2 = pd.read_csv(f'./hourData/{tag2}_HAN_zzinppa.csv').iloc[:,1]
+y2 = pd.read_csv(f'./hourData/{tag2}_HAN_Error.csv').iloc[:,1]
 
 X2 = np.array(X2)
 y2 = np.array(y2)
@@ -93,6 +95,10 @@ model.fit(X2, y2)
 # 산점도 그리기
 plt.figure(figsize=(12, 6))
 
+#그래프의 끝 길이 얻기
+xlim = plt.gca().get_xlim()
+ylim = plt.gca().get_ylim()
+
 #정상차트표시
 plt.subplot(2, 1, 1)
 plt.scatter(X, y, c='orange', s=65, label="Original Data", alpha=0.3)
@@ -103,6 +109,10 @@ plt.ylabel(f"{tag2}")
 plt.fill_between(X.flatten(), (y_pred - confidence_interval), (y_pred + confidence_interval), color='gray', alpha=0.5)
 plt.title("Original Data")
 plt.legend()
+#MSE 평균제곱오차 표시1
+mse1 = mean_squared_error(y, y_pred)
+plt.text(xlim[1]*0.9, ylim[1]*0.9, f'MSE = {mse1}', fontsize=9)  # MSE 값을 표시
+
 
 #오류차트표시
 plt.subplot(2, 1, 2)
@@ -118,17 +128,22 @@ y_position = 616  # 예시입니다. 실제로는 원하는 위치를 지정해�
 plt.annotate('95% Confidence Interval', xy=(x_position, y_position), xytext=(x_position+20, y_position + 20),
              arrowprops=dict(facecolor='black', arrowstyle='->'),
              fontsize=12)
-plt.title("Predict Data")
+plt.title("Error Data")
+
 
 # 그래프 그리기
-plt.scatter(x_sorted, y_sorted)
-plt.title('Scatter Plot with Constant y Intervals')
+#plt.scatter(x_sorted, y_sorted)
+#plt.title('Error Data')
 
-# 동일한 y값을 가진 구간 표시
-for interval in same_y_intervals:
-    plt.hlines(interval[2], interval[0], interval[1], colors='r', linestyles='dashed')
 plt.legend()
 
+# # 동일한 y값을 가진 구간 표시
+for interval in same_y_intervals:
+    plt.hlines(interval[2], interval[0], interval[1], colors='r', linestyles='dashed')
+
+#MSE 평균제곱오차 표시2 ( y2와 y_pred의 평균제곱오차 )
+mse2 = mean_squared_error(y2, y_pred)
+plt.text(xlim[1]*0.9, ylim[1]*0.9, f'MSE = {mse2:.4f}', fontsize=9) # MSE 값을 표시
 
 
 plt.tight_layout()
