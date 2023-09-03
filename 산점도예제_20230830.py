@@ -5,8 +5,7 @@ from keras import Sequential
 from keras.layers import Dense
 from scipy import stats
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-
+from keras import backend as K
 EPOCH = 5000
 
 tag1 = 'DCD1AIG01ACTI01'
@@ -17,6 +16,10 @@ def loadCsvData(tagName):
     return df.iloc[:,1]
 
 # 데이터 생성
+def r_squared(y_true, y_pred):
+    SS_res = K.sum(K.square(y_true - y_pred))
+    SS_tot = K.sum(K.square(y_true - K.mean(y_true)))
+    return (1 - SS_res/(SS_tot + K.epsilon()))
 np.random.seed(42)
 #X = [10,20,30,40,50,60,77,80,91]
 #y = [100,200,300,400,500,600,700,800,900]
@@ -30,13 +33,13 @@ x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 # 모델 정의
 model = Sequential()
-model.add(Dense(1, input_dim=1))
+model.add(Dense(2, input_dim=1))
 
 # 컴파일
-model.compile(loss='mean_squared_error', optimizer='Adam')
+model.compile(loss='mean_squared_error', optimizer='Adam', metrics=[r_squared])
 
 # 학습
-model.fit(X, y, epochs=EPOCH, batch_size=32, verbose=1)
+history = model.fit(X, y, epochs=EPOCH, batch_size=32, verbose=1)
 
 # 예측값 생성
 y_pred = model.predict(X).flatten()
@@ -52,7 +55,7 @@ confidence_interval = stderr * stats.t.ppf((1 + 0.95) / 2, len(y) - 1)
 
 # x2와 y2 데이터
 X2 = X  # x2는 x와 값이 완벽하게 같다고 가정
-y2 = pd.read_csv(f'./hourData/{tag2}_HAN_Error.csv').iloc[:,1]
+y2 = pd.read_csv(f'./hourData/{tag2}_HAN_zzinppa.csv').iloc[:,1]
 
 X2 = np.array(X2)
 y2 = np.array(y2)
@@ -95,10 +98,6 @@ model.fit(X2, y2)
 # 산점도 그리기
 plt.figure(figsize=(12, 6))
 
-#그래프의 끝 길이 얻기
-xlim = plt.gca().get_xlim()
-ylim = plt.gca().get_ylim()
-
 #정상차트표시
 plt.subplot(2, 1, 1)
 plt.scatter(X, y, c='orange', s=65, label="Original Data", alpha=0.3)
@@ -109,10 +108,6 @@ plt.ylabel(f"{tag2}")
 plt.fill_between(X.flatten(), (y_pred - confidence_interval), (y_pred + confidence_interval), color='gray', alpha=0.5)
 plt.title("Original Data")
 plt.legend()
-#MSE 평균제곱오차 표시1
-mse1 = mean_squared_error(y, y_pred)
-plt.text(xlim[1]*0.9, ylim[1]*0.9, f'MSE = {mse1}', fontsize=9)  # MSE 값을 표시
-
 
 #오류차트표시
 plt.subplot(2, 1, 2)
@@ -128,23 +123,21 @@ y_position = 616  # 예시입니다. 실제로는 원하는 위치를 지정해�
 plt.annotate('95% Confidence Interval', xy=(x_position, y_position), xytext=(x_position+20, y_position + 20),
              arrowprops=dict(facecolor='black', arrowstyle='->'),
              fontsize=12)
-plt.title("Error Data")
-
+plt.title("Predict Data")
 
 # 그래프 그리기
-#plt.scatter(x_sorted, y_sorted)
-#plt.title('Error Data')
+plt.scatter(x_sorted, y_sorted)
+plt.title('Scatter Plot with Constant y Intervals')
 
-plt.legend()
-
-# # 동일한 y값을 가진 구간 표시
+# 동일한 y값을 가진 구간 표시
 for interval in same_y_intervals:
     plt.hlines(interval[2], interval[0], interval[1], colors='r', linestyles='dashed')
+plt.legend()
 
-#MSE 평균제곱오차 표시2 ( y2와 y_pred의 평균제곱오차 )
-mse2 = mean_squared_error(y2, y_pred)
-plt.text(xlim[1]*0.9, ylim[1]*0.9, f'MSE = {mse2:.4f}', fontsize=9) # MSE 값을 표시
 
 
 plt.tight_layout()
 plt.show()
+
+# 학습 이후 R^2 값은 history 객체에서 확인 가능
+print("Final R^2 value:", history.history['r_squared'][-1])
