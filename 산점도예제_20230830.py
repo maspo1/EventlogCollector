@@ -6,7 +6,7 @@ from keras.layers import Dense
 from scipy import stats
 from sklearn.model_selection import train_test_split
 from keras import backend as K
-EPOCH = 5000
+EPOCH = 500
 
 tag1 = 'DCD1AIG01ACTI01'
 tag2 = 'DCD1AIG01CURR01'
@@ -32,22 +32,27 @@ y = np.array(y)
 x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # 모델 정의
-model = Sequential()
-model.add(Dense(2, input_dim=1))
+#model = Sequential()
+#model.add(Dense(1, input_dim=1))
+model = Sequential([
+    Dense(10, activation='relu', input_shape=(1,)),
+    Dense(10, activation='relu'),
+    Dense(1, activation='linear')
+])
 
 # 컴파일
 model.compile(loss='mean_squared_error', optimizer='Adam', metrics=[r_squared])
 
 # 학습
-history = model.fit(X, y, epochs=EPOCH, batch_size=32, verbose=1)
+history = model.fit(x_train, y_train, epochs=EPOCH, batch_size=32, verbose=1)
 
 # 예측값 생성
 y_pred = model.predict(X).flatten()
 
-# 잔차 계산
+# 잔차 계산 ( 観測値－予測値）
 residuals = y - y_pred
 
-# 잔차의 표준 오차 계산
+# 잔차의 표준편차 계산
 stderr = np.std(residuals)
 
 # 95% 신뢰 구간 계산
@@ -101,7 +106,7 @@ plt.figure(figsize=(12, 6))
 #정상차트표시
 plt.subplot(2, 1, 1)
 plt.scatter(X, y, c='orange', s=65, label="Original Data", alpha=0.3)
-plt.plot(X, model.predict(X), color='blue', linewidth=1, label="Regression Line")
+plt.plot(X, y_pred, color='red', linewidth=1, label=r"$Regression Line$")
 plt.xlabel(f"{tag1}")
 plt.ylabel(f"{tag2}")
 # 신뢰구간 그리기
